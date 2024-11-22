@@ -4,7 +4,14 @@
 import * as React from 'react'
 
 function countReducer(state, action) {
-  return {...state, ...action}
+  if (typeof action === 'function') {
+    return {...state, ...action(state)}
+  } else if (typeof action === 'object') {
+    return {...state, ...action}
+  }
+  throw new Error(
+    `Unsupported type for parameter 'action': '${typeof action}'. Supported types are 'object' and 'function'`,
+  )
 }
 
 function Counter({initialCount = 0, step = 1}) {
@@ -14,7 +21,7 @@ function Counter({initialCount = 0, step = 1}) {
 
   const {count} = state
 
-  const increment = () => setState({count: count + step})
+  const increment = () => setState('test')
   return <button onClick={increment}>{count}</button>
 }
 
