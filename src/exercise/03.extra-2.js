@@ -15,6 +15,7 @@ import {
 } from '../pokemon'
 import {useAsync} from '../utils'
 
+// #region PokemonCacheContext
 const PokemonCacheContext = React.createContext()
 
 function pokemonCacheReducer(cache, action) {
@@ -61,42 +62,10 @@ function usePokemonCache() {
 
   return context
 }
+// #endregion PokemonCacheContext
 
-function PokemonInfo({pokemonName}) {
-  const [cache, pokemonCacheDispatcher] = usePokemonCache()
-
-  const {data: pokemon, status, error, run, setData, setIdle} = useAsync()
-
-  React.useEffect(() => {
-    if (!pokemonName) {
-      if (pokemon) {
-        setIdle()
-      }
-      return
-    } else if (cache[pokemonName]) {
-      setData(cache[pokemonName])
-    } else {
-      run(
-        fetchPokemon(pokemonName).then(pokemonData => {
-          pokemonCacheDispatcher({
-            type: 'ADD_POKEMON',
-            pokemonName,
-            pokemonData,
-          })
-          return pokemonData
-        }),
-      )
-    }
-  }, [
-    cache,
-    pokemon,
-    setIdle,
-    pokemonCacheDispatcher,
-    pokemonName,
-    run,
-    setData,
-  ])
-
+// #region PokemonSection
+function PokemonInfo({pokemonName, pokemon, status, error}) {
   if (status === 'idle') {
     return 'Submit a pokemon'
   } else if (status === 'pending') {
@@ -108,8 +77,8 @@ function PokemonInfo({pokemonName}) {
   }
 }
 
-function PreviousPokemon({onSelect}) {
-  const [cache, dispatch] = usePokemonCache()
+function PreviousPokemon({onSelect, onRemove}) {
+  const [cache] = usePokemonCache()
   return (
     <div>
       Previous Pokemon
@@ -137,8 +106,7 @@ function PreviousPokemon({onSelect}) {
                 color: 'white',
               }}
               onClick={() => {
-                onSelect('')
-                dispatch({type: 'REMOVE_POKEMON', pokemonName})
+                onRemove(pokemonName)
               }}
             >
               remove
@@ -151,22 +119,89 @@ function PreviousPokemon({onSelect}) {
 }
 
 function PokemonSection({onSelect, pokemonName}) {
+  const [cache, pokemonCacheDispatcher] = usePokemonCache()
+
+  const {data: pokemon, status, error, run, setData, setIdle} = useAsync()
+
+  /**
+   * Handle removing a pokemon name from cache
+   */
+  function handleRemove(pokemonNameToRemove) {
+    pokemonCacheDispatcher({
+      type: 'REMOVE_POKEMON',
+      pokemonName: pokemonNameToRemove,
+    })
+    // just removed a pokemon from cache. if there
+    // are pokemon left cache display it
+    const cacheKeys = Object.keys(cache)
+    const filteredCacheKeys = cacheKeys.filter(
+      key => key !== pokemonNameToRemove,
+    )
+    if (pokemonName !== pokemonNameToRemove) {
+      // pokemon removed is not the one being displayed
+      // no need to try and show different pokemon
+      return
+    }
+    if (filteredCacheKeys.length > 0) {
+      const [key] = Object.keys(cache)
+      if (key != null) {
+        onSelect(key)
+        setData(cache[key])
+        return
+      }
+    }
+    // no more keys setIdle and set no pokemon selected
+    onSelect('')
+    setIdle()
+  }
+
+  React.useEffect(() => {
+    if (!pokemonName) {
+      return
+    } else if (cache[pokemonName]) {
+      setData(cache[pokemonName])
+    } else {
+      run(
+        fetchPokemon(pokemonName).then(pokemonData => {
+          pokemonCacheDispatcher({
+            type: 'ADD_POKEMON',
+            pokemonName,
+            pokemonData,
+          })
+          return pokemonData
+        }),
+      )
+    }
+  }, [
+    cache,
+    pokemon,
+    setIdle,
+    pokemonCacheDispatcher,
+    pokemonName,
+    run,
+    setData,
+  ])
+
   return (
     <div style={{display: 'flex'}}>
-      <PokemonCacheProvider>
-        <PreviousPokemon onSelect={onSelect} />
-        <div className="pokemon-info" style={{marginLeft: 10}}>
-          <PokemonErrorBoundary
-            onReset={() => onSelect('')}
-            resetKeys={[pokemonName]}
-          >
-            <PokemonInfo pokemonName={pokemonName} />
-          </PokemonErrorBoundary>
-        </div>
-      </PokemonCacheProvider>
+      <PreviousPokemon onRemove={handleRemove} onSelect={onSelect} />
+      <div className="pokemon-info" style={{marginLeft: 10}}>
+        <PokemonErrorBoundary
+          onReset={() => onSelect('')}
+          resetKeys={[pokemonName]}
+        >
+          <PokemonInfo
+            status={status}
+            pokemon={pokemon}
+            pokemonName={pokemonName}
+            error={error}
+          />
+        </PokemonErrorBoundary>
+      </div>
     </div>
   )
 }
+// #endregion PokemonSection
 
 function App() {
   const [pokemonName, setPokemonName] = React.useState(null)
@@ -183,7 +218,9 @@ function App() {
     <div className="pokemon-info-app">
       <PokemonForm pokemonName={pokemonName} onSubmit={handleSubmit} />
       <hr />
-      <PokemonSection onSelect={handleSelect} pokemonName={pokemonName} />
+      <PokemonCacheProvider>
+        <PokemonSection onSelect={handleSelect} pokemonName={pokemonName} />
+      </PokemonCacheProvider>
     </div>
   )
 }
