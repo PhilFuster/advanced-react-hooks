@@ -27,6 +27,9 @@ function asyncReducer(state, action) {
     case 'rejected': {
       return {status: 'rejected', data: null, error: action.error}
     }
+    case 'idle': {
+      return {status: 'idle', data: null, error: null}
+    }
     default: {
       throw new Error(`Unhandled action type: ${action.type}`)
     }
@@ -68,10 +71,15 @@ function useAsync(initialState) {
     error => dispatch({type: 'rejected', error}),
     [dispatch],
   )
+  const setIdle = React.useCallback(
+    () => dispatch({type: 'idle', data: null}),
+    [dispatch],
+  )
 
   return {
     setData,
     setError,
+    setIdle,
     error,
     status,
     data,

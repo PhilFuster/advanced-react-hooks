@@ -27,6 +27,14 @@ function pokemonCacheReducer(cache, action) {
       console.dir(updatedCache)
       return updatedCache
     }
+    case 'REMOVE_POKEMON': {
+      const {pokemonName} = action
+      const updatedCache = {...cache}
+
+      delete updatedCache[pokemonName]
+
+      return updatedCache
+    }
     default: {
       throw new Error(`Unhandled action type: ${action.type}`)
     }
@@ -57,10 +65,13 @@ function usePokemonCache() {
 function PokemonInfo({pokemonName}) {
   const [cache, pokemonCacheDispatcher] = usePokemonCache()
 
-  const {data: pokemon, status, error, run, setData} = useAsync()
+  const {data: pokemon, status, error, run, setData, setIdle} = useAsync()
 
   React.useEffect(() => {
     if (!pokemonName) {
+      if (pokemon) {
+        setIdle()
+      }
       return
     } else if (cache[pokemonName]) {
       setData(cache[pokemonName])
@@ -76,7 +87,15 @@ function PokemonInfo({pokemonName}) {
         }),
       )
     }
-  }, [cache, pokemonCacheDispatcher, pokemonName, run, setData])
+  }, [
+    cache,
+    pokemon,
+    setIdle,
+    pokemonCacheDispatcher,
+    pokemonName,
+    run,
+    setData,
+  ])
 
   if (status === 'idle') {
     return 'Submit a pokemon'
@@ -90,18 +109,39 @@ function PokemonInfo({pokemonName}) {
 }
 
 function PreviousPokemon({onSelect}) {
-  const [cache] = usePokemonCache()
+  const [cache, dispatch] = usePokemonCache()
   return (
     <div>
       Previous Pokemon
       <ul style={{listStyle: 'none', paddingLeft: 0}}>
         {Object.keys(cache).map(pokemonName => (
-          <li key={pokemonName} style={{margin: '4px auto'}}>
+          <li
+            key={pokemonName}
+            style={{
+              margin: '4px auto',
+              display: 'grid',
+              gridAutoFlow: 'column',
+              gridTemplateColumns: '1fr 1fr',
+            }}
+          >
             <button
               style={{width: '100%'}}
               onClick={() => onSelect(pokemonName)}
             >
               {pokemonName}
+            </button>
+            <button
+              style={{
+                width: '100%',
+                backgroundColor: 'black',
+                color: 'white',
+              }}
+              onClick={() => {
+                onSelect('')
+                dispatch({type: 'REMOVE_POKEMON', pokemonName})
+              }}
+            >
+              remove
             </button>
           </li>
         ))}
