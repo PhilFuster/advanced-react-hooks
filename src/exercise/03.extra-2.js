@@ -2,9 +2,6 @@
 // 💯 caching in a context provider (exercise)
 // http://localhost:3000/isolated/exercise/03.extra-2.js
 
-// you can edit this here and look at the isolated page or you can copy/paste
-// this in the regular exercise file.
-
 import * as React from 'react'
 import {
   fetchPokemon,
@@ -18,14 +15,16 @@ import {useAsync} from '../utils'
 // #region PokemonCacheContext
 const PokemonCacheContext = React.createContext()
 
+const debug = false
+
 function pokemonCacheReducer(cache, action) {
-  console.log(`pokemonCacheReducer action: `)
-  console.dir(action)
+  debug && console.log(`pokemonCacheReducer action: `)
+  debug && console.dir(action)
   switch (action.type) {
     case 'ADD_POKEMON': {
       const updatedCache = {...cache, [action.pokemonName]: action.pokemonData}
-      console.log(`updatedCache after action: `)
-      console.dir(updatedCache)
+      debug && console.log(`updatedCache after action: `)
+      debug && console.dir(updatedCache)
       return updatedCache
     }
     case 'REMOVE_POKEMON': {
@@ -53,13 +52,11 @@ function PokemonCacheProvider({children}) {
 
 function usePokemonCache() {
   const context = React.useContext(PokemonCacheContext)
-
   if (context == null) {
     throw new Error(
       `usePokemonCacheContext must be used within a PokemonCacheProvider`,
     )
   }
-
   return context
 }
 // #endregion PokemonCacheContext
@@ -121,7 +118,7 @@ function PreviousPokemon({onSelect, onRemove}) {
 function PokemonSection({onSelect, pokemonName}) {
   const [cache, pokemonCacheDispatcher] = usePokemonCache()
 
-  const {data: pokemon, status, error, run, setData, setIdle} = useAsync()
+  const {data: pokemon, status, error, run, setData, reset} = useAsync()
 
   /**
    * Handle removing a pokemon name from cache
@@ -150,9 +147,8 @@ function PokemonSection({onSelect, pokemonName}) {
         return
       }
     }
-    // no more keys setIdle and set no pokemon selected
     onSelect('')
-    setIdle()
+    reset()
   }
 
   React.useEffect(() => {
@@ -172,15 +168,7 @@ function PokemonSection({onSelect, pokemonName}) {
         }),
       )
     }
-  }, [
-    cache,
-    pokemon,
-    setIdle,
-    pokemonCacheDispatcher,
-    pokemonName,
-    run,
-    setData,
-  ])
+  }, [cache, pokemon, reset, pokemonCacheDispatcher, pokemonName, run, setData])
 
   return (
     <div style={{display: 'flex'}}>

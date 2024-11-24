@@ -71,15 +71,15 @@ function useAsync(initialState) {
     error => dispatch({type: 'rejected', error}),
     [dispatch],
   )
-  const setIdle = React.useCallback(
-    () => dispatch({type: 'idle', data: null}),
+  const reset = React.useCallback(
+    () => dispatch({type: 'idle', data: null, error: null}),
     [dispatch],
   )
 
   return {
     setData,
     setError,
-    setIdle,
+    reset,
     error,
     status,
     data,
